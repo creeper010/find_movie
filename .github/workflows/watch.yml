@@ -2,7 +2,7 @@ name: ODEON Cinema Watch
 
 on:
   schedule:
-    - cron: "0 * * * *"   # hourly, UTC
+    - cron: "*/5 * * * *"   # hourly, UTC
     # - cron: "*/30 * * * *"  # every 30 minutes, UTC
   workflow_dispatch:
 
