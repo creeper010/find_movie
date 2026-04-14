@@ -1,0 +1,37 @@
+name: ODEON Cinema Watch
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # hourly, UTC
+    # - cron: "*/30 * * * *"  # every 30 minutes, UTC
+  workflow_dispatch:
+
+concurrency:
+  group: odeon-cinema-watch
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python packages
+        run: pip install -r requirements.txt
+
+      - name: Install Chromium for Playwright
+        run: playwright install --with-deps chromium
+
+      - name: Run monitor
+        run: python3 main.py
+        env:
+          MOVIE_TERMS: "The Amazing Digital Circus|The Amazing Digital Circus: The Last Act|TADC"
+          ODEON_URLS: "https://www.odeon.co.uk/|https://www.odeon.co.uk/films/"
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          EXIT_ON_ALERT: "1"
