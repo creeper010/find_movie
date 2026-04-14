@@ -32,6 +32,6 @@ jobs:
         run: python3 main.py
         env:
           MOVIE_TERMS: "The Super Mario Galaxy Movie|The Amazing Digital Circus: The Last Act|TADC"
-          ODEON_URLS: "https://www.odeon.co.uk/|https://www.odeon.co.uk/films/|https://www.myvue.com/whats-on"
+          ODEON_URLS: "https://www.imdb.com/title/tt28650488/"
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
           EXIT_ON_ALERT: "1"
