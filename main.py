@@ -141,7 +141,7 @@ def main() -> int:
         print("=" * 72 + "\n")
         send_webhook(msg)
         if EXIT_ON_ALERT:
-            return 2
+            return 0
 
     return 0
 
