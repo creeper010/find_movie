@@ -32,6 +32,6 @@ jobs:
         run: python3 main.py
         env:
           MOVIE_TERMS: "The Super Mario Galaxy Movie|The Amazing Digital Circus|The Amazing Digital Circus: The Last Act|TADC"
-          ODEON_URLS: "https://www.odeon.co.uk/films/|https://www.odeon.co.uk/|https://www.myvue.com/|https://www.myvue.com/latest-movies|https://www.myvue.com/whats-on|https://www.myvue.com/coming-soon|https://www.cineworld.co.uk/|https://www.cineworld.co.uk/cinemas/birmingham-broad-street/044#/buy-tickets-by-cinema?in-cinema=044&at=2026-04-14&view-mode=list|https://www.imdb.com/title/tt28650488/"
+          ODEON_URLS: "https://www.odeon.co.uk/films/|https://www.odeon.co.uk/|https://www.myvue.com/|https://www.myvue.com/latest-movies|https://www.myvue.com/whats-on|https://www.myvue.com/coming-soon|https://www.cineworld.co.uk/|https://www.cineworld.co.uk/cinemas/birmingham-broad-street/044#/buy-tickets-by-cinema?in-cinema=044&at=2026-04-14&view-mode=list"
           ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
           EXIT_ON_ALERT: "1"
