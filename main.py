@@ -148,7 +148,7 @@ def main() -> int:
     print("  Blocked pages:", blocked_any)
 
     if found_any:
-        msg = "ALERT: ODEON page mentions the movie: " + " / ".join(MOVIE_TERMS)
+        msg = "ALERT: ODEON page mentions the movie: " + " / ".join(MOVIE_TERMS) + "@everyone"
         print("\n" + "=" * 72)
         print(msg)
         print("=" * 72 + "\n")
