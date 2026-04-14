@@ -11,7 +11,7 @@ MOVIE_TERMS = [
     term.strip().lower()
     for term in os.getenv(
         "MOVIE_TERMS",
-        "The Amazing Digital Circus|The Amazing Digital Circus: The Last Act|TADC",
+        "The Super Mario Galaxy Movie|The Amazing Digital Circus: The Last Act|TADC",
     ).split("|")
     if term.strip()
 ]
