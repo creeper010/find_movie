@@ -1,61 +1,51 @@
+# main.py
 import os
 import re
-import sys
 from datetime import datetime, timezone
 
 import requests
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-# Watch for these terms. Add/remove variants as needed.
 MOVIE_TERMS = [
     term.strip().lower()
     for term in os.getenv(
         "MOVIE_TERMS",
-        "The Super Mario Galaxy Movie|The Amazing Digital Circus: The Last Act|TADC",
+        "The Amazing Digital Circus|The Amazing Digital Circus: The Last Act|TADC",
     ).split("|")
     if term.strip()
 ]
 
-# Watch ODEON’s public pages. Add a specific cinema page if you have one.
 URLS = [
     url.strip()
     for url in os.getenv(
         "ODEON_URLS",
-        "https://www.odeon.co.uk/|https://www.odeon.co.uk/films/",
+        "https://www.odeon.co.uk/odeon-scene/|https://www.odeon.co.uk/films/",
     ).split("|")
     if url.strip()
-]
-
-# Phrases that usually mean tickets are live.
-SALE_TERMS = [
-    "book now",
-    "book tickets",
-    "buy tickets",
-    "tickets available",
-    "tickets on sale",
-    "on sale now",
-    "pre-book now",
-    "pre-book",
-    "presale",
-    "pre-sale",
 ]
 
 WEBHOOK_URL = os.getenv("ALERT_WEBHOOK_URL", "").strip()
 EXIT_ON_ALERT = os.getenv("EXIT_ON_ALERT", "1").strip() == "1"
 
+CLOUDFLARE_MARKERS = [
+    "attention required! | cloudflare",
+    "just a moment...",
+    "cloudflare",
+]
+
 def norm(text: str) -> str:
     return re.sub(r"\s+", " ", text).lower()
 
-def find_snippets(text: str, terms: list[str], max_hits: int = 6) -> list[str]:
+def snippets(text: str, terms: list[str], max_hits: int = 5) -> list[str]:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    hits = []
+    out = []
     for line in lines:
         low = line.lower()
         if any(term in low for term in terms):
-            hits.append(line[:220])
-            if len(hits) >= max_hits:
+            out.append(line[:220])
+            if len(out) >= max_hits:
                 break
-    return hits
+    return out
 
 def send_webhook(message: str) -> None:
     if not WEBHOOK_URL:
@@ -66,42 +56,43 @@ def send_webhook(message: str) -> None:
         print(f"[WEBHOOK ERROR] {e}")
 
 def check_url(page, url: str) -> dict:
-    result = {
-        "url": url,
-        "movie_hits": [],
-        "sale_hits": [],
-        "title": "",
-    }
-
     page.goto(url, wait_until="domcontentloaded", timeout=60000)
     try:
         page.wait_for_load_state("networkidle", timeout=10000)
     except PlaywrightTimeoutError:
         pass
 
-    result["title"] = page.title() or ""
-    body_text = page.locator("body").inner_text(timeout=20000)
-    text = norm(body_text)
+    title = page.title() or ""
+    body = page.locator("body").inner_text(timeout=20000)
 
-    result["movie_hits"] = [term for term in MOVIE_TERMS if term in text]
-    result["sale_hits"] = [term for term in SALE_TERMS if term in text]
+    title_low = title.lower()
+    body_low = norm(body)
 
-    result["movie_snips"] = find_snippets(body_text, MOVIE_TERMS)
-    result["sale_snips"] = find_snippets(body_text, SALE_TERMS)
+    blocked = any(marker in title_low for marker in CLOUDFLARE_MARKERS) or any(
+        marker in body_low for marker in CLOUDFLARE_MARKERS
+    )
 
-    return result
+    hits = [term for term in MOVIE_TERMS if term in body_low]
+    snips = snippets(body, MOVIE_TERMS)
+
+    return {
+        "url": url,
+        "title": title,
+        "blocked": blocked,
+        "hits": hits,
+        "snips": snips,
+    }
 
 def main() -> int:
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-    print(f"\n[{stamp}] Starting ODEON check")
+    print(f"\n[{stamp}] Starting movie mention check")
     print("Watching for:", " | ".join(MOVIE_TERMS))
     print("Pages:")
     for url in URLS:
         print(" -", url)
 
-    any_movie = False
-    any_sale = False
-    details = []
+    found_any = False
+    blocked_any = False
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -115,32 +106,24 @@ def main() -> int:
         for url in URLS:
             try:
                 result = check_url(page, url)
-                details.append(result)
 
                 print(f"\n[{url}]")
                 print(f"Title: {result['title'] or '(no title)'}")
 
-                if result["movie_hits"]:
-                    any_movie = True
-                    print("Movie match:", ", ".join(result["movie_hits"]))
+                if result["blocked"]:
+                    blocked_any = True
+                    print("Blocked by Cloudflare or similar protection.")
+                    continue
+
+                if result["hits"]:
+                    found_any = True
+                    print("Movie mention found:", ", ".join(result["hits"]))
+                    if result["snips"]:
+                        print("Snippets:")
+                        for s in result["snips"]:
+                            print("  -", s)
                 else:
-                    print("Movie match: none")
-
-                if result["sale_hits"]:
-                    any_sale = True
-                    print("Sale wording:", ", ".join(result["sale_hits"]))
-                else:
-                    print("Sale wording: none")
-
-                if result["movie_snips"]:
-                    print("Movie snippets:")
-                    for s in result["movie_snips"]:
-                        print("  -", s)
-
-                if result["sale_snips"]:
-                    print("Sale snippets:")
-                    for s in result["sale_snips"]:
-                        print("  -", s)
+                    print("Movie mention: none")
 
             except Exception as e:
                 print(f"[ERROR] {url} -> {e}")
@@ -148,20 +131,15 @@ def main() -> int:
         browser.close()
 
     print("\nSummary:")
-    print("  Movie found:", any_movie)
-    print("  Sale wording found:", any_sale)
+    print("  Movie found:", found_any)
+    print("  Blocked pages:", blocked_any)
 
-    if any_movie:
-        msg = (
-            "ALERT: ODEON page looks live for "
-            + " / ".join(MOVIE_TERMS)
-            + " — ticket-sale wording detected."
-        )
+    if found_any:
+        msg = "ALERT: ODEON page mentions the movie: " + " / ".join(MOVIE_TERMS)
         print("\n" + "=" * 72)
         print(msg)
         print("=" * 72 + "\n")
         send_webhook(msg)
-
         if EXIT_ON_ALERT:
             return 2
 
