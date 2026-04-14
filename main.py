@@ -151,7 +151,7 @@ def main() -> int:
     print("  Movie found:", any_movie)
     print("  Sale wording found:", any_sale)
 
-    if any_movie and any_sale:
+    if any_movie:
         msg = (
             "ALERT: ODEON page looks live for "
             + " / ".join(MOVIE_TERMS)
