@@ -47,7 +47,20 @@ def snippets(text: str, terms: list[str], max_hits: int = 5) -> list[str]:
                 break
     return out
 
-def send_webhook(message: str) -> None:
+def send_webhook1(message: str) -> None:
+    if not WEBHOOK_URL:
+        return
+    try:
+        requests.post(WEBHOOK_URL, json={
+            "content": message,
+            "allowed_mentions": {
+                "parse": ["everyone"]
+            }
+        }, timeout=15)
+    except Exception as e:
+        print(f"[WEBHOOK ERROR] {e}")
+
+def send_webhook2(message: str) -> None:
     if not WEBHOOK_URL:
         return
     try:
@@ -139,9 +152,13 @@ def main() -> int:
         print("\n" + "=" * 72)
         print(msg)
         print("=" * 72 + "\n")
-        send_webhook(msg)
+        send_webhook1(msg)
         if EXIT_ON_ALERT:
             return 0
+    else:
+        msg = "Nothing found for: " + " / ".join(MOVIE_TERMS)
+        send_webhook2(msg)
+        return 0
 
     return 0
 
